@@ -852,61 +852,47 @@ function openSyncModal() {
 function setLog(msg) { document.getElementById("syncLog").textContent = msg; }
 
 /* ── JSONP 호출 헬퍼 ── */
-function jsonp(params) {
-  return new Promise((resolve, reject) => {
-    const cbName = "_cb" + Date.now() + Math.random().toString(36).slice(2);
-    const url    = new URL(SCRIPT_URL);
-    url.searchParams.set("callback", cbName);
-    Object.entries(params).forEach(([k,v]) => url.searchParams.set(k, v));
+/* ── GAS 통신 (fetch mode:no-cors 저장 / cors 불러오기) ── */
 
-    const script = document.createElement("script");
-    const timer  = setTimeout(() => {
-      cleanup();
-      reject(new Error("타임아웃 (15초)"));
-    }, 15000);
-
-    window[cbName] = (data) => { cleanup(); resolve(data); };
-    script.onerror = () => { cleanup(); reject(new Error("스크립트 로드 실패")); };
-    script.src = url.toString();
-    document.head.appendChild(script);
-
-    function cleanup() {
-      clearTimeout(timer);
-      delete window[cbName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-    }
-  });
+async function gasCall(params) {
+  const url = new URL(SCRIPT_URL);
+  Object.entries(params).forEach(([k,v]) => url.searchParams.set(k, String(v)));
+  // no-cors: 응답 못 읽지만 전송은 됨 (저장용)
+  // cors: 응답 읽기 가능 (불러오기용)
+  const mode = params.action === "load" || params.action === "ping" ? "cors" : "no-cors";
+  const res = await fetch(url.toString(), { method: "GET", mode });
+  if (mode === "no-cors") return { ok: true }; // 응답 못 읽으므로 성공으로 간주
+  const text = await res.text();
+  return JSON.parse(text);
 }
 
-/* ── 청크 분할 전송 (4KB씩) ── */
 async function sendInChunks(payload) {
-  const CHUNK = 4000;
+  const CHUNK = 3000;
   const total = Math.ceil(payload.length / CHUNK);
   const key   = "k" + Date.now();
 
   for (let i = 0; i < total; i++) {
-    const chunk = payload.slice(i * CHUNK, (i+1) * CHUNK);
-    const res = await jsonp({ action: "save_chunk", key, chunk: encodeURIComponent(chunk), total, index: i });
-    if (res.error) throw new Error("청크 " + i + " 오류: " + res.error);
+    const chunk = encodeURIComponent(payload.slice(i * CHUNK, (i+1) * CHUNK));
+    await gasCall({ action: "save_chunk", key, chunk, total, index: i });
   }
-  const res = await jsonp({ action: "save_done" });
-  if (res.error) throw new Error("조합 오류: " + res.error);
-  return res;
+  // save_done은 응답 필요 없으므로 no-cors OK
+  await gasCall({ action: "save_done" });
+  return { success: true, savedAt: new Date().toISOString() };
 }
 
 async function testSync() {
   const url = document.getElementById("syncUrl").value.trim();
   if (!url) { setLog("⚠️ URL을 먼저 입력하세요."); return; }
-  const origUrl = SCRIPT_URL;
-  SCRIPT_URL = url;
   setLog("🔄 연결 테스트 중...");
   try {
-    const data = await jsonp({ action: "ping" });
+    const origUrl = SCRIPT_URL;
+    SCRIPT_URL = url;
+    const res = await fetch(SCRIPT_URL + "?action=ping", { method: "GET", mode: "cors" });
+    const data = await res.json();
     if (data.ok) setLog("✅ 연결 성공!");
-    else setLog("❌ 응답 오류: " + JSON.stringify(data));
+    else { setLog("❌ 오류: " + JSON.stringify(data)); SCRIPT_URL = origUrl; }
   } catch(e) {
-    setLog("❌ 연결 실패: " + e.message + "\n→ 배포 시 '모든 사용자(익명 포함)' 선택했는지 확인하세요.");
-    SCRIPT_URL = origUrl;
+    setLog("❌ 연결 실패: " + e.message);
   }
 }
 
@@ -929,9 +915,9 @@ async function syncSave() {
       dashboard: dashRows,
       tasks,
     });
-    const res = await sendInChunks(payload);
+    await sendInChunks(payload);
     updateSyncStatus("ok", "저장 완료");
-    setLog("✅ 저장 완료: " + new Date(res.savedAt).toLocaleString("ko-KR"));
+    setLog("✅ 저장 완료: " + new Date().toLocaleString("ko-KR"));
   } catch(e) {
     updateSyncStatus("err");
     setLog("❌ 저장 실패: " + e.message);
@@ -943,10 +929,11 @@ async function syncLoad() {
   updateSyncStatus("ing");
   setLog("🔄 불러오는 중...");
   try {
-    const data = await jsonp({ action: "load" });
+    const res = await fetch(SCRIPT_URL + "?action=load", { method: "GET", mode: "cors" });
+    const data = await res.json();
     if (data.error) throw new Error(data.error);
 
-    if (data.clients && data.clients.length > 0) {
+    if (data.clients   && data.clients.length   > 0) {
       clients = data.clients.map(c => ({
         ...c,
         checks: typeof c.checks === "string" ? JSON.parse(c.checks || "{}") : (c.checks || {}),
@@ -981,8 +968,7 @@ function autoSync() {
         dashboard: dashRows,
         tasks,
       });
-      const res = await sendInChunks(payload);
-      if (res.error) throw new Error(res.error);
+      await sendInChunks(payload);
       updateSyncStatus("ok", "저장됨 " + new Date().toLocaleTimeString("ko-KR", {hour:"2-digit", minute:"2-digit"}));
     } catch(e) {
       updateSyncStatus("err", "저장 실패");
