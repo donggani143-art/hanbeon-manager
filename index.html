@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -7,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
   --bg:#f8f7f4; --surface:#fff; --surface2:#f3f2ef; --border:#e8e6e1; --border2:#d4d1ca;
@@ -160,16 +162,16 @@ select.f-input{cursor:pointer}
 .color-dots{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
 .color-dot{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s}
 .color-dot.selected{border-color:var(--text);transform:scale(1.15)}
-/* ── 구글 시트 연동 ── */
+/* ── 로컬 저장 ── */
 .sync-panel{padding:10px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0}
 .sync-status{display:flex;align-items:center;gap:5px;font-size:11px;margin-bottom:6px;padding:4px 6px;border-radius:4px}
 .sync-none{color:var(--text3)}
 .sync-ok{color:var(--accent);background:var(--accent-bg)}
 .sync-err{color:var(--danger);background:var(--danger-bg)}
 .sync-ing{color:#1d4ed8;background:#dbeafe}
-.sync-btn{width:100%;padding:8px;font-size:12px;font-weight:600;border:1.5px solid #4285f4;border-radius:var(--radius);background:#fff;cursor:pointer;color:#4285f4;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s;font-family:'Noto Sans KR',sans-serif}
-.sync-btn:hover{background:#4285f4;color:#fff}
-.sync-modal{max-width:460px}
+.sync-btn{width:100%;padding:8px;font-size:12px;font-weight:600;border:1.5px solid var(--accent);border-radius:var(--radius);background:var(--accent);cursor:pointer;color:#fff;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s;font-family:'Noto Sans KR',sans-serif}
+.sync-btn:hover{background:#155a3e}
+.sync-modal{max-width:420px}
 .sync-log{font-size:11px;color:var(--text2);margin-top:8px;min-height:18px;font-family:'JetBrains Mono',monospace;background:var(--surface2);padding:6px 8px;border-radius:4px;line-height:1.6}
 
 .summary-chips{display:flex;gap:6px;flex-wrap:wrap;padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
@@ -254,14 +256,28 @@ tbody tr.dragging{opacity:.4;background:var(--surface2) !important}
     </div>
     <div class="client-list" id="clientList"></div>
 
-    <!-- 구글 시트 연동 패널 -->
+    <!-- Supabase 저장 패널 -->
     <div class="sync-panel">
       <div id="syncStatus" class="sync-status sync-none">
-        <i class="fa-solid fa-circle-dot"></i><span>미연동</span>
+        <i class="fa-solid fa-circle-dot"></i><span>저장 안 됨</span>
       </div>
-      <button class="sync-btn" onclick="openSyncModal()">
-        <i class="fa-brands fa-google"></i>구글 시트 연동
-      </button>
+      <div style="display:flex;gap:5px;margin-bottom:5px">
+        <button class="sync-btn" onclick="syncSave()" style="flex:1;font-size:11px">
+          <i class="fa-solid fa-cloud-arrow-up"></i>저장
+        </button>
+        <button class="sync-btn" onclick="syncLoad()" style="flex:1;font-size:11px;border-color:var(--border2);background:var(--surface);color:var(--text2)">
+          <i class="fa-solid fa-cloud-arrow-down"></i>불러오기
+        </button>
+      </div>
+      <div style="display:flex;gap:5px">
+        <button class="sync-btn" onclick="exportData()" style="flex:1;font-size:10px;border-color:var(--border2);background:var(--surface);color:var(--text2)">
+          <i class="fa-solid fa-file-export"></i>내보내기
+        </button>
+        <button class="sync-btn" onclick="document.getElementById('importFile').click()" style="flex:1;font-size:10px;border-color:var(--border2);background:var(--surface);color:var(--text2)">
+          <i class="fa-solid fa-file-import"></i>가져오기
+        </button>
+      </div>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
     </div>
   </div>
 
@@ -419,33 +435,7 @@ tbody tr.dragging{opacity:.4;background:var(--surface2) !important}
   </div>
 </div>
 
-<!-- 구글 시트 연동 모달 -->
-<div class="modal-overlay" id="syncModal">
-  <div class="modal sync-modal">
-    <h3><i class="fa-brands fa-google" style="color:#4285f4"></i>구글 시트 연동 설정</h3>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.7;background:var(--surface2);padding:10px;border-radius:var(--radius)">
-      <b>설정 방법:</b><br>
-      1. Google Sheets 열기 → 확장프로그램 → Apps Script<br>
-      2. <code style="background:var(--border);padding:1px 4px;border-radius:3px">google_apps_script.js</code> 내용 붙여넣기<br>
-      3. 배포 → 새 배포 → 웹앱 → <b>누구나 접근</b> → 배포<br>
-      4. 생성된 URL 아래에 붙여넣기
-    </div>
-    <div class="f-group" style="margin-bottom:10px">
-      <div class="f-label">Apps Script 웹앱 URL</div>
-      <input class="f-input sync-url-input" id="syncUrl" placeholder="https://script.google.com/macros/s/..." style="font-size:12px">
-    </div>
-    <div style="display:flex;gap:6px">
-      <button class="btn" style="flex:1;justify-content:center" onclick="testSync()"><i class="fa-solid fa-plug"></i>연결 테스트</button>
-      <button class="btn primary" style="flex:1;justify-content:center" onclick="saveSync()"><i class="fa-solid fa-check"></i>저장 및 연동</button>
-    </div>
-    <div class="sync-log" id="syncLog">연동 상태가 여기에 표시됩니다.</div>
-    <div style="display:flex;gap:6px;margin-top:10px">
-      <button class="btn" style="flex:1;justify-content:center" onclick="syncLoad()"><i class="fa-solid fa-cloud-arrow-down"></i>시트에서 불러오기</button>
-      <button class="btn primary" style="flex:1;justify-content:center" onclick="syncSave()"><i class="fa-solid fa-cloud-arrow-up"></i>시트에 저장하기</button>
-    </div>
-    <div class="modal-actions"><button class="btn" onclick="closeModals()">닫기</button></div>
-  </div>
-</div>
+
 
 <!-- 거래처 추가 모달 -->
 <div class="modal-overlay" id="addModal">
@@ -828,154 +818,104 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModals();});
 /* ════════════════════════════════
    구글 시트 연동
 ════════════════════════════════ */
-let SCRIPT_URL = localStorage.getItem("scriptUrl") || "";
+/* ════════════════════════════════
+   Supabase 연동
+════════════════════════════════ */
+const SUPABASE_URL = "https://wbmbhloswnoiawbliscd.supabase.co";
+const SUPABASE_KEY = "sb_publishable_VtAGv3LcCzg59J2rxZKLgw_s6RbvrNI";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 function updateSyncStatus(state, msg) {
   const el = document.getElementById("syncStatus");
+  if (!el) return;
   const map = {
-    none: {cls:"sync-none", icon:"fa-circle-dot",    text:"미연동"},
-    ok:   {cls:"sync-ok",   icon:"fa-circle-check",  text:"연동됨"},
-    err:  {cls:"sync-err",  icon:"fa-circle-xmark",  text:"연동 오류"},
-    ing:  {cls:"sync-ing",  icon:"fa-circle-notch fa-spin", text:"동기화 중..."},
+    none: {cls:"sync-none", icon:"fa-circle-dot",   text:"저장 안 됨"},
+    ok:   {cls:"sync-ok",   icon:"fa-circle-check", text:"저장됨"},
+    err:  {cls:"sync-err",  icon:"fa-circle-xmark", text:"저장 실패"},
+    ing:  {cls:"sync-ing",  icon:"fa-circle-notch fa-spin", text:"저장 중..."},
   };
   const s = map[state] || map.none;
   el.className = "sync-status " + s.cls;
   el.innerHTML = `<i class="fa-solid ${s.icon}"></i><span>${msg || s.text}</span>`;
 }
 
-function openSyncModal() {
-  document.getElementById("syncUrl").value = SCRIPT_URL;
-  document.getElementById("syncLog").textContent = SCRIPT_URL ? "저장된 URL이 있습니다. 불러오기/저장하기를 눌러 동기화하세요." : "Apps Script URL을 입력하고 연결 테스트를 해보세요.";
-  document.getElementById("syncModal").classList.add("open");
-}
-
-function setLog(msg) { document.getElementById("syncLog").textContent = msg; }
-
-/* ── JSONP 호출 헬퍼 ── */
-/* ── GAS 통신 (fetch mode:no-cors 저장 / cors 불러오기) ── */
-
-async function gasCall(params) {
-  const url = new URL(SCRIPT_URL);
-  Object.entries(params).forEach(([k,v]) => url.searchParams.set(k, String(v)));
-  // no-cors: 응답 못 읽지만 전송은 됨 (저장용)
-  // cors: 응답 읽기 가능 (불러오기용)
-  const mode = params.action === "load" || params.action === "ping" ? "cors" : "no-cors";
-  const res = await fetch(url.toString(), { method: "GET", mode });
-  if (mode === "no-cors") return { ok: true }; // 응답 못 읽으므로 성공으로 간주
-  const text = await res.text();
-  return JSON.parse(text);
-}
-
-async function sendInChunks(payload) {
-  const CHUNK = 3000;
-  const total = Math.ceil(payload.length / CHUNK);
-  const key   = "k" + Date.now();
-
-  for (let i = 0; i < total; i++) {
-    const chunk = encodeURIComponent(payload.slice(i * CHUNK, (i+1) * CHUNK));
-    await gasCall({ action: "save_chunk", key, chunk, total, index: i });
-  }
-  // save_done은 응답 필요 없으므로 no-cors OK
-  await gasCall({ action: "save_done" });
-  return { success: true, savedAt: new Date().toISOString() };
-}
-
-async function testSync() {
-  const url = document.getElementById("syncUrl").value.trim();
-  if (!url) { setLog("⚠️ URL을 먼저 입력하세요."); return; }
-  setLog("🔄 연결 테스트 중...");
-  try {
-    const origUrl = SCRIPT_URL;
-    SCRIPT_URL = url;
-    const res = await fetch(SCRIPT_URL + "?action=ping", { method: "GET", mode: "cors" });
-    const data = await res.json();
-    if (data.ok) setLog("✅ 연결 성공!");
-    else { setLog("❌ 오류: " + JSON.stringify(data)); SCRIPT_URL = origUrl; }
-  } catch(e) {
-    setLog("❌ 연결 실패: " + e.message);
-  }
-}
-
-function saveSync() {
-  const url = document.getElementById("syncUrl").value.trim();
-  if (!url) { setLog("⚠️ URL을 먼저 입력하세요."); return; }
-  SCRIPT_URL = url;
-  localStorage.setItem("scriptUrl", url);
-  updateSyncStatus("ok", "연동됨");
-  setLog("✅ URL이 저장되었습니다.");
-}
-
 async function syncSave() {
-  if (!SCRIPT_URL) { alert("먼저 구글 시트 연동 설정에서 URL을 저장해주세요."); return; }
-  updateSyncStatus("ing");
-  setLog("🔄 저장 중...");
+  updateSyncStatus("ing", "저장 중...");
   try {
-    const payload = JSON.stringify({
-      clients:   clients.map(c => ({...c, checks: JSON.stringify(c.checks), info: JSON.stringify(c.info)})),
+    const { error } = await sb.from("app_data").upsert({
+      id: "main",
+      clients,
       dashboard: dashRows,
       tasks,
+      updated_at: new Date().toISOString(),
     });
-    await sendInChunks(payload);
-    updateSyncStatus("ok", "저장 완료");
-    setLog("✅ 저장 완료: " + new Date().toLocaleString("ko-KR"));
+    if (error) throw error;
+    updateSyncStatus("ok", "저장됨 " + new Date().toLocaleTimeString("ko-KR", {hour:"2-digit", minute:"2-digit"}));
   } catch(e) {
-    updateSyncStatus("err");
-    setLog("❌ 저장 실패: " + e.message);
+    updateSyncStatus("err", "저장 실패");
+    console.error("저장 오류:", e);
   }
 }
 
 async function syncLoad() {
-  if (!SCRIPT_URL) { alert("먼저 구글 시트 연동 설정에서 URL을 저장해주세요."); return; }
-  updateSyncStatus("ing");
-  setLog("🔄 불러오는 중...");
+  updateSyncStatus("ing", "불러오는 중...");
   try {
-    const res = await fetch(SCRIPT_URL + "?action=load", { method: "GET", mode: "cors" });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-
-    if (data.clients   && data.clients.length   > 0) {
-      clients = data.clients.map(c => ({
-        ...c,
-        checks: typeof c.checks === "string" ? JSON.parse(c.checks || "{}") : (c.checks || {}),
-        info:   typeof c.info   === "string" ? JSON.parse(c.info   || "{}") : (c.info   || newInfo()),
-      }));
-    }
+    const { data, error } = await sb.from("app_data").select("*").eq("id", "main").single();
+    if (error) throw error;
+    if (data.clients   && data.clients.length   > 0) clients  = data.clients;
     if (data.dashboard && data.dashboard.length > 0) dashRows = data.dashboard.map(r => ({...newDashRow(""), ...r}));
-    if (data.tasks     && data.tasks.length     > 0) tasks = data.tasks;
-
+    if (data.tasks     && data.tasks.length     > 0) tasks    = data.tasks;
     updateSyncStatus("ok", "불러오기 완료");
-    setLog("✅ 완료: 클라이언트 " + clients.length + "개, 병원 " + dashRows.length + "개, 태스크 " + tasks.length + "개");
     renderSidebar();
     if (document.getElementById("dashView").style.display !== "none") renderDashboard();
     else if (document.getElementById("scheduleView").style.display !== "none") renderSchedule();
     else if (activeId) renderTabContent();
   } catch(e) {
-    updateSyncStatus("err");
-    setLog("❌ 불러오기 실패: " + e.message);
+    updateSyncStatus("err", "불러오기 실패");
+    console.error("불러오기 오류:", e);
   }
+}
+
+function exportData() {
+  const data = {clients, dashboard: dashRows, tasks, exportedAt: new Date().toISOString()};
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "hanbeon_data_" + new Date().toISOString().slice(0,10) + ".json";
+  a.click();
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (data.clients)   clients  = data.clients;
+      if (data.dashboard) dashRows = data.dashboard.map(r => ({...newDashRow(""), ...r}));
+      if (data.tasks)     tasks    = data.tasks;
+      renderSidebar();
+      if (document.getElementById("dashView").style.display !== "none") renderDashboard();
+      else if (document.getElementById("scheduleView").style.display !== "none") renderSchedule();
+      else if (activeId) renderTabContent();
+      alert("✅ 데이터를 성공적으로 가져왔습니다!");
+    } catch(err) { alert("❌ 파일 형식이 올바르지 않습니다."); }
+  };
+  reader.readAsText(file);
+  event.target.value = "";
 }
 
 /* ── 자동 저장 (디바운스 2초) ── */
 let autoSyncTimer = null;
 function autoSync() {
-  if (!SCRIPT_URL) return;
   updateSyncStatus("ing", "저장 중...");
   clearTimeout(autoSyncTimer);
-  autoSyncTimer = setTimeout(async () => {
-    try {
-      const payload = JSON.stringify({
-        clients:   clients.map(c => ({...c, checks: JSON.stringify(c.checks), info: JSON.stringify(c.info)})),
-        dashboard: dashRows,
-        tasks,
-      });
-      await sendInChunks(payload);
-      updateSyncStatus("ok", "저장됨 " + new Date().toLocaleTimeString("ko-KR", {hour:"2-digit", minute:"2-digit"}));
-    } catch(e) {
-      updateSyncStatus("err", "저장 실패");
-      console.error("autoSync 오류:", e);
-    }
-  }, 2000);
+  autoSyncTimer = setTimeout(() => { syncSave(); }, 2000);
 }
+
+// 시작 시 Supabase에서 불러오기
+syncLoad();
 
 renderSidebar();
 showDashboard();
