@@ -330,6 +330,9 @@ tbody tr.dragging{opacity:.4;background:var(--surface2) !important}
         <option value="quote">견적서</option>
         <option value="contract_doc">계약서</option>
         <option value="deposit">입금</option>
+        <option value="google_review">구글리뷰기</option>
+        <option value="qr_showcase">QR쇼케이스</option>
+        <option value="info_input">정보입력 프로그램</option>
       </select>
       <select class="fi" id="fWebPost" onchange="applyFilter()">
         <option value="">웹포스팅 전체</option>
@@ -358,6 +361,9 @@ tbody tr.dragging{opacity:.4;background:var(--surface2) !important}
             <th style="border-left:2px solid var(--border2)">견적서</th>
             <th>계약서</th>
             <th>입금</th>
+            <th style="border-left:2px solid var(--border2)">구글<br>리뷰기</th>
+            <th>QR<br>쇼케이스</th>
+            <th>정보입력<br>프로그램</th>
             <th></th>
           </tr>
         </thead>
@@ -503,11 +509,11 @@ const SECTIONS=[
   ]}
 ];
 
-const SVC_KEYS=["hp_move","hp_opt","hp_new","monthly","backlink","google_ai","multi_lang","web_post","quote","contract_doc","deposit"];
-const SVC_LABEL={hp_move:"홈페이지 이관",hp_opt:"홈페이지 최적화",hp_new:"홈페이지 신규",monthly:"월관리",backlink:"백링크",google_ai:"구글리뷰AI",multi_lang:"다국어 버전",web_post:"웹포스팅",quote:"견적서",contract_doc:"계약서",deposit:"입금"};
+const SVC_KEYS=["hp_move","hp_opt","hp_new","monthly","backlink","google_ai","multi_lang","web_post","quote","contract_doc","deposit","google_review","qr_showcase","info_input"];
+const SVC_LABEL={hp_move:"홈페이지 이관",hp_opt:"홈페이지 최적화",hp_new:"홈페이지 신규",monthly:"월관리",backlink:"백링크",google_ai:"구글리뷰AI",multi_lang:"다국어 버전",web_post:"웹포스팅",quote:"견적서",contract_doc:"계약서",deposit:"입금",google_review:"구글리뷰기",qr_showcase:"QR쇼케이스",info_input:"정보입력"};
 
 function newInfo(){return{doctor:"",phone:"",addr:"",domain_host:"",domain_id:"",domain_pw:"",host_host:"",host_id:"",host_pw:"",admin_url:"",admin_id:"",admin_pw:"",ftp_id:"",ftp_pw:"",naver_id:"",mail_svc:"",subjects:"",strengths:"",refs:"",memo:"",multi:"",maint:"",seo:"",aeo:"",vat:"",files:""};}
-function newDashRow(name=""){return{id:"d"+Date.now()+"_"+Math.random().toString(36).slice(2),name,hp_move:false,hp_opt:false,hp_new:false,monthly:false,backlink:false,google_ai:false,multi_lang:false,quote:false,contract_doc:false,deposit:false,web_post:false};}
+function newDashRow(name=""){return{id:"d"+Date.now()+"_"+Math.random().toString(36).slice(2),name,hp_move:false,hp_opt:false,hp_new:false,monthly:false,backlink:false,google_ai:false,multi_lang:false,quote:false,contract_doc:false,deposit:false,web_post:false,google_review:false,qr_showcase:false,info_input:false};}
 
 /* ─── 거래처 데이터 ─── */
 let clients=[
@@ -709,6 +715,9 @@ function renderDashBody(rows){
         <div class="svc-dot ${row[k]?"on":"off"}"><i class="fa-solid ${row[k]?"fa-circle-check":"fa-circle"}"></i></div>
       </td>`).join("")}
       ${["quote","contract_doc","deposit"].map(k=>`<td class="svc-cell" onclick="toggleSvc('${row.id}','${k}')" ${k==="quote"?"style=\"border-left:2px solid var(--border2)\"":""}>
+        <div class="svc-dot ${row[k]?"on":"off"}"><i class="fa-solid ${row[k]?"fa-circle-check":"fa-circle"}"></i></div>
+      </td>`).join("")}
+      ${["google_review","qr_showcase","info_input"].map(k=>`<td class="svc-cell" onclick="toggleSvc('${row.id}','${k}')" ${k==="google_review"?"style=\"border-left:2px solid var(--border2)\"":""}>
         <div class="svc-dot ${row[k]?"on":"off"}"><i class="fa-solid ${row[k]?"fa-circle-check":"fa-circle"}"></i></div>
       </td>`).join("")}
       <td><button class="row-del" onclick="deleteDashRow('${row.id}')" title="삭제"><i class="fa-solid fa-xmark"></i></button></td>
