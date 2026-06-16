@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -219,6 +218,23 @@ tbody tr:hover .row-del{opacity:1}
 
 /* 드래그 앤 드롭 */
 .drag-handle{cursor:grab;color:var(--border2);font-size:13px;padding:4px 6px;border-radius:4px;transition:color .15s;flex-shrink:0;user-select:none;opacity:0}
+.col-resize{position:absolute;right:0;top:0;width:5px;height:100%;cursor:col-resize;background:transparent;z-index:10}
+.col-resize:hover,.col-resize.resizing{background:var(--accent);opacity:.5}
+.th-wrap{position:relative;display:flex;align-items:center;justify-content:center;gap:4px;width:100%;height:100%}
+.col-mgr-btn{background:none;border:none;cursor:pointer;color:var(--text3);font-size:11px;padding:2px 4px;border-radius:3px;transition:all .15s}
+.col-mgr-btn:hover{background:var(--accent-bg);color:var(--accent)}
+/* 항목 관리 모달 */
+.col-modal{max-width:500px}
+.col-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:6px;background:var(--surface);cursor:grab}
+.col-item:hover{background:var(--surface2)}
+.col-item.dragging-col{opacity:.4;background:var(--surface2)}
+.col-item.drag-over-col{outline:2px solid var(--accent)}
+.col-item-label{flex:1;font-size:13px;font-weight:500}
+.col-item-key{font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace}
+.col-vis{cursor:pointer;color:var(--text3);transition:color .15s}
+.col-vis:hover{color:var(--accent)}
+.col-vis.active{color:var(--accent)}
+.new-col-row{display:flex;gap:6px;margin-top:10px}
 tbody tr:hover .drag-handle{opacity:1}
 .drag-handle:hover{color:var(--text2)}
 .drag-handle:active{cursor:grabbing}
@@ -342,30 +358,13 @@ tbody tr.dragging{opacity:.4;background:var(--surface2) !important}
       <span class="filter-spacer"></span>
       <span class="filter-count" id="filterCount"></span>
       <button class="btn" onclick="resetFilter()"><i class="fa-solid fa-rotate-left" style="font-size:11px"></i>초기화</button>
+      <button class="btn" onclick="openColManager()" style="margin-left:4px"><i class="fa-solid fa-table-columns"></i>항목 관리</button>
     </div>
 
     <div class="table-wrap">
       <table>
-        <thead>
-          <tr>
-            <th style="width:32px"></th>
-            <th style="text-align:left;padding-left:8px">치과명</th>
-            <th>홈페이지<br>이관</th>
-            <th>홈페이지<br>최적화</th>
-            <th>홈페이지<br>신규</th>
-            <th>월관리</th>
-            <th>백링크</th>
-            <th>구글리뷰AI</th>
-            <th>다국어<br>버전</th>
-            <th>웹포스팅</th>
-            <th style="border-left:2px solid var(--border2)">견적서</th>
-            <th>계약서</th>
-            <th>입금</th>
-            <th style="border-left:2px solid var(--border2)">구글<br>리뷰기</th>
-            <th>QR<br>쇼케이스</th>
-            <th>정보입력<br>프로그램</th>
-            <th></th>
-          </tr>
+        <thead id="dashThead">
+          <tr id="dashTheadRow"></tr>
         </thead>
         <tbody id="dashBody"></tbody>
       </table>
@@ -462,6 +461,22 @@ tbody tr.dragging{opacity:.4;background:var(--surface2) !important}
   </div>
 </div>
 
+<!-- 항목 관리 모달 -->
+<div class="modal-overlay" id="colModal">
+  <div class="modal col-modal">
+    <h3><i class="fa-solid fa-table-columns" style="color:var(--accent)"></i>항목 관리</h3>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:10px">드래그로 순서 변경 · 눈 아이콘으로 표시/숨김 · 항목 추가/삭제 가능</p>
+    <div id="colItemList"></div>
+    <div class="new-col-row">
+      <input class="f-input" id="newColLabel" placeholder="새 항목 이름 (예: 유지보수)" style="flex:1;font-size:12px">
+      <button class="btn primary" onclick="addNewCol()"><i class="fa-solid fa-plus"></i>추가</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModals()">닫기</button>
+    </div>
+  </div>
+</div>
+
 <!-- 공유 모달 -->
 <div class="modal-overlay" id="shareModal">
   <div class="modal share-modal">
@@ -509,11 +524,34 @@ const SECTIONS=[
   ]}
 ];
 
-const SVC_KEYS=["hp_move","hp_opt","hp_new","monthly","backlink","google_ai","multi_lang","web_post","quote","contract_doc","deposit","google_review","qr_showcase","info_input"];
-const SVC_LABEL={hp_move:"홈페이지 이관",hp_opt:"홈페이지 최적화",hp_new:"홈페이지 신규",monthly:"월관리",backlink:"백링크",google_ai:"구글리뷰AI",multi_lang:"다국어 버전",web_post:"웹포스팅",quote:"견적서",contract_doc:"계약서",deposit:"입금",google_review:"구글리뷰기",qr_showcase:"QR쇼케이스",info_input:"정보입력"};
+/* ─── 동적 컬럼 관리 ─── */
+let columns = [
+  {key:"hp_move",  label:"홈페이지\n이관",    visible:true, width:60, group:"service"},
+  {key:"hp_opt",   label:"홈페이지\n최적화",  visible:true, width:60, group:"service"},
+  {key:"hp_new",   label:"홈페이지\n신규",    visible:true, width:60, group:"service"},
+  {key:"monthly",  label:"월관리",             visible:true, width:55, group:"service"},
+  {key:"backlink", label:"백링크",             visible:true, width:55, group:"service"},
+  {key:"google_ai",label:"구글리뷰AI",         visible:true, width:65, group:"service"},
+  {key:"multi_lang",label:"다국어\n버전",     visible:true, width:55, group:"service"},
+  {key:"web_post", label:"웹포스팅",           visible:true, width:60, group:"service"},
+  {key:"quote",    label:"견적서",             visible:true, width:50, group:"admin", divider:true},
+  {key:"contract_doc",label:"계약서",          visible:true, width:50, group:"admin"},
+  {key:"deposit",  label:"입금",               visible:true, width:50, group:"admin"},
+  {key:"google_review",label:"구글\n리뷰기",  visible:true, width:55, group:"product", divider:true},
+  {key:"qr_showcase",  label:"QR\n쇼케이스", visible:true, width:55, group:"product"},
+  {key:"info_input",   label:"정보입력\n프로그램", visible:true, width:65, group:"product"},
+];
+
+const SVC_KEYS = () => columns.map(c=>c.key);
+const SVC_LABEL_MAP = () => Object.fromEntries(columns.map(c=>[c.key, c.label.replace(/\\n/g," ")]));
+const visibleCols = () => columns.filter(c=>c.visible);
 
 function newInfo(){return{doctor:"",phone:"",addr:"",domain_host:"",domain_id:"",domain_pw:"",host_host:"",host_id:"",host_pw:"",admin_url:"",admin_id:"",admin_pw:"",ftp_id:"",ftp_pw:"",naver_id:"",mail_svc:"",subjects:"",strengths:"",refs:"",memo:"",multi:"",maint:"",seo:"",aeo:"",vat:"",files:""};}
-function newDashRow(name=""){return{id:"d"+Date.now()+"_"+Math.random().toString(36).slice(2),name,hp_move:false,hp_opt:false,hp_new:false,monthly:false,backlink:false,google_ai:false,multi_lang:false,quote:false,contract_doc:false,deposit:false,web_post:false,google_review:false,qr_showcase:false,info_input:false};}
+function newDashRow(name=""){
+  const row={id:"d"+Date.now()+"_"+Math.random().toString(36).slice(2),name};
+  columns.forEach(col=>{if(!(col.key in row))row[col.key]=false;});
+  return row;
+}
 
 /* ─── 거래처 데이터 ─── */
 let clients=[
@@ -674,16 +712,15 @@ function saveAll(){
 }
 
 /* ─── 대시보드 ─── */
-function renderDashboard(){renderSummary();applyFilter();}
+function renderDashboard(){renderSummary();updateFilterOptions();applyFilter();}
 
 function renderSummary(){
   const t=dashRows.length;
-  const counts={};SVC_KEYS.forEach(k=>{counts[k]=dashRows.filter(r=>r[k]).length;});
-  const wp=dashRows.filter(r=>r.web_post).length;
+  const vc=visibleCols();
+  const counts={};vc.forEach(col=>{counts[col.key]=dashRows.filter(r=>r[col.key]).length;});
   document.getElementById("summaryChips").innerHTML=
     `<div class="chip chip-gray"><i class="fa-solid fa-hospital" style="font-size:10px"></i>전체 ${t}개 병원</div>`+
-    SVC_KEYS.map(k=>`<div class="chip chip-green"><i class="fa-solid fa-circle-check" style="font-size:10px"></i>${SVC_LABEL[k]} ${counts[k]}</div>`).join("")+
-    `<div class="chip chip-blue"><i class="fa-solid fa-pen-to-square" style="font-size:10px"></i>웹포스팅 ${wp}개</div>`;
+    vc.map(col=>`<div class="chip chip-green"><i class="fa-solid fa-circle-check" style="font-size:10px"></i>${col.label.replace(/\n/g," ")} ${counts[col.key]}</div>`).join("");
 }
 
 function applyFilter(){
@@ -699,26 +736,34 @@ function applyFilter(){
   });
   const fc=document.getElementById("filterCount");
   if(fc) fc.textContent=`${rows.length} / ${dashRows.length}개 표시 중`;
+  renderDashHeader();
   renderDashBody(rows);
 }
 
+function renderDashHeader(){
+  const vc=visibleCols();
+  const tr=document.getElementById("dashTheadRow");
+  if(!tr)return;
+  tr.innerHTML=`<th style="width:32px"></th><th style="text-align:left;padding-left:8px;min-width:130px;position:sticky;left:32px;background:var(--surface2);z-index:3">치과명</th>`+
+    vc.map(col=>`<th style="width:${col.width}px;min-width:${col.width}px;${col.divider?"border-left:2px solid var(--border2)":""};position:relative" data-key="${col.key}">
+      <div class="th-wrap">${col.label.replace(/\n/g,"<br>")}</div>
+      <div class="col-resize" onmousedown="startResize(event,'${col.key}')"></div>
+    </th>`).join("")+
+    `<th style="width:36px"></th>`;
+}
+
 function renderDashBody(rows){
+  const vc=visibleCols();
   document.getElementById("dashBody").innerHTML=rows.map(row=>`
     <tr draggable="true" data-id="${row.id}">
-      <td><span class="drag-handle" title="드래그하여 순서 변경"><i class="fa-solid fa-grip-vertical"></i></span></td>
-      <td style="padding-left:8px">
+      <td style="width:32px"><span class="drag-handle" title="드래그하여 순서 변경"><i class="fa-solid fa-grip-vertical"></i></span></td>
+      <td style="padding-left:8px;position:sticky;left:32px;background:var(--surface);z-index:1">
         <input class="name-input" value="${row.name.replace(/"/g,'&quot;')}" placeholder="병원명 입력"
           onchange="updateRow('${row.id}','name',this.value)"
           onfocus="this.style.background='var(--accent-bg)'" onblur="this.style.background='transparent'">
       </td>
-      ${SVC_KEYS.filter(k=>k!=="quote"&&k!=="contract_doc"&&k!=="deposit").map(k=>`<td class="svc-cell" onclick="toggleSvc('${row.id}','${k}')">
-        <div class="svc-dot ${row[k]?"on":"off"}"><i class="fa-solid ${row[k]?"fa-circle-check":"fa-circle"}"></i></div>
-      </td>`).join("")}
-      ${["quote","contract_doc","deposit"].map(k=>`<td class="svc-cell" onclick="toggleSvc('${row.id}','${k}')" ${k==="quote"?"style=\"border-left:2px solid var(--border2)\"":""}>
-        <div class="svc-dot ${row[k]?"on":"off"}"><i class="fa-solid ${row[k]?"fa-circle-check":"fa-circle"}"></i></div>
-      </td>`).join("")}
-      ${["google_review","qr_showcase","info_input"].map(k=>`<td class="svc-cell" onclick="toggleSvc('${row.id}','${k}')" ${k==="google_review"?"style=\"border-left:2px solid var(--border2)\"":""}>
-        <div class="svc-dot ${row[k]?"on":"off"}"><i class="fa-solid ${row[k]?"fa-circle-check":"fa-circle"}"></i></div>
+      ${vc.map(col=>`<td class="svc-cell" onclick="toggleSvc('${row.id}','${col.key}')" style="width:${col.width}px;${col.divider?"border-left:2px solid var(--border2)":""}">
+        <div class="svc-dot ${row[col.key]?"on":"off"}"><i class="fa-solid ${row[col.key]?"fa-circle-check":"fa-circle"}"></i></div>
       </td>`).join("")}
       <td><button class="row-del" onclick="deleteDashRow('${row.id}')" title="삭제"><i class="fa-solid fa-xmark"></i></button></td>
     </tr>`).join("");
@@ -766,6 +811,101 @@ function initDragDrop(){
       renderDashboard();
     });
   });
+}
+
+/* ─── 항목(컬럼) 관리 ─── */
+function openColManager(){
+  renderColList();
+  document.getElementById("colModal").classList.add("open");
+}
+
+function renderColList(){
+  const el=document.getElementById("colItemList");
+  el.innerHTML=columns.map((col,i)=>`
+    <div class="col-item" draggable="true" data-ci="${i}" 
+      ondragstart="colDragStart(event,${i})" ondragover="colDragOver(event,${i})" 
+      ondrop="colDrop(event,${i})" ondragleave="this.classList.remove('drag-over-col')">
+      <i class="fa-solid fa-grip-vertical" style="color:var(--text3);font-size:12px"></i>
+      <span class="col-item-label">${col.label.replace(/\n/g," ")}</span>
+      <span class="col-item-key">${col.key}</span>
+      <i class="fa-solid ${col.visible?"fa-eye":"fa-eye-slash"} col-vis ${col.visible?"active":""}" 
+        onclick="toggleColVisible(${i})" title="${col.visible?"숨기기":"표시"}"></i>
+      <button onclick="deleteCol(${i})" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px;padding:2px 5px" title="삭제">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>`).join("");
+}
+
+let colDragIdx=null;
+function colDragStart(e,i){colDragIdx=i;e.currentTarget.classList.add("dragging-col");}
+function colDragOver(e,i){e.preventDefault();if(i!==colDragIdx)e.currentTarget.classList.add("drag-over-col");}
+function colDrop(e,i){
+  e.preventDefault();
+  e.currentTarget.classList.remove("drag-over-col");
+  if(colDragIdx===null||colDragIdx===i)return;
+  const [moved]=columns.splice(colDragIdx,1);
+  columns.splice(i,0,moved);
+  colDragIdx=null;
+  renderColList();
+  renderDashboard();
+}
+function toggleColVisible(i){columns[i].visible=!columns[i].visible;renderColList();renderDashboard();}
+function deleteCol(i){
+  if(!confirm(`"${columns[i].label.replace(/\n/g," ")}" 항목을 삭제하시겠습니까?`))return;
+  columns.splice(i,1);
+  renderColList();
+  renderDashboard();
+}
+function addNewCol(){
+  const label=document.getElementById("newColLabel").value.trim();
+  if(!label){alert("항목 이름을 입력하세요.");return;}
+  const key="custom_"+Date.now();
+  columns.push({key,label,visible:true,width:60,group:"custom"});
+  dashRows.forEach(r=>{r[key]=false;});
+  document.getElementById("newColLabel").value="";
+  renderColList();
+  renderDashboard();
+  autoSync();
+}
+
+/* ─── 열 너비 조절 ─── */
+let resizeKey=null,resizeStartX=0,resizeStartW=0;
+function startResize(e,key){
+  e.preventDefault();
+  resizeKey=key;
+  resizeStartX=e.clientX;
+  const col=columns.find(c=>c.key===key);
+  resizeStartW=col?col.width:60;
+  document.addEventListener("mousemove",doResize);
+  document.addEventListener("mouseup",endResize);
+  document.querySelector(`[data-key="${key}"] .col-resize`)?.classList.add("resizing");
+}
+function doResize(e){
+  if(!resizeKey)return;
+  const col=columns.find(c=>c.key===resizeKey);
+  if(!col)return;
+  const newW=Math.max(40,resizeStartW+(e.clientX-resizeStartX));
+  col.width=newW;
+  // 헤더 th와 tbody td 모두 즉시 업데이트
+  document.querySelectorAll(`th[data-key="${resizeKey}"]`).forEach(th=>{th.style.width=newW+"px";th.style.minWidth=newW+"px";});
+  document.querySelectorAll(`#dashBody td.svc-cell`).forEach((td,idx)=>{
+    // 해당 컬럼 인덱스 계산
+  });
+}
+function endResize(){
+  resizeKey=null;
+  document.removeEventListener("mousemove",doResize);
+  document.removeEventListener("mouseup",endResize);
+  renderDashboard(); // 정확히 다시 그림
+}
+
+/* ─── fService 옵션 동적 업데이트 ─── */
+function updateFilterOptions(){
+  const sel=document.getElementById("fService");
+  if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML=`<option value="">서비스 전체</option>`+
+    columns.map(col=>`<option value="${col.key}"${cur===col.key?" selected":""}>${col.label.replace(/\n/g," ")}</option>`).join("");
 }
 
 function toggleSvc(id,key){const r=dashRows.find(r=>r.id===id);if(r){r[key]=!r[key];renderDashboard();autoSync();}}
