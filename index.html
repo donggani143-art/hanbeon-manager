@@ -368,9 +368,14 @@ tbody tr.dragging{opacity:.4;background:var(--surface2) !important}
         </thead>
         <tbody id="dashBody"></tbody>
       </table>
-      <button class="add-row-btn" onclick="addDashRow()">
-        <i class="fa-solid fa-plus"></i>병원 행 추가
-      </button>
+      <div style="display:flex;border-top:1px dashed var(--border)">
+        <button class="add-row-btn" onclick="addDashRow()" style="flex:1;border-top:none">
+          <i class="fa-solid fa-plus"></i>병원 행 추가
+        </button>
+        <button class="add-row-btn" onclick="addNewColInline()" style="flex:1;border-top:none;border-left:1px dashed var(--border);color:var(--info, #1d4ed8)">
+          <i class="fa-solid fa-table-columns"></i>항목 열 추가
+        </button>
+      </div>
     </div>
 
     <div class="legend-bar">
@@ -555,25 +560,37 @@ function newDashRow(name=""){
 
 /* ─── 거래처 데이터 ─── */
 let clients=[
-  {id:"c1",name:"녹색치과",checks:{},info:newInfo()},
-  {id:"c2",name:"범계유디치과",checks:{},info:newInfo()},
-  {id:"c3",name:"엔와이치과",checks:{},info:newInfo()},
-  {id:"c4",name:"베곤탑치과",checks:{},info:newInfo()},
-  {id:"c5",name:"더에스플란트치과",checks:{},info:newInfo()},
-  {id:"c6",name:"서울알프하임치과",checks:{},info:newInfo()},
-  {id:"c7",name:"로덴성문치과",checks:{},info:newInfo()},
+  {id:"c1", name:"계양가온365치과", checks:{},info:newInfo()},
+  {id:"c2", name:"녹색치과",        checks:{},info:newInfo()},
+  {id:"c3", name:"범계유디치과",    checks:{},info:newInfo()},
+  {id:"c4", name:"엔와이치과",      checks:{},info:newInfo()},
+  {id:"c5", name:"베곤탑치과",      checks:{},info:newInfo()},
+  {id:"c6", name:"더에스플란트치과",checks:{},info:newInfo()},
+  {id:"c7", name:"인천맥치과",      checks:{},info:newInfo()},
+  {id:"c8", name:"서울디테일치과",  checks:{},info:newInfo()},
+  {id:"c9", name:"로덴성문치과",    checks:{},info:newInfo()},
+  {id:"c10",name:"화이트라인치과",  checks:{},info:newInfo()},
+  {id:"c11",name:"아이엠치과병원",  checks:{},info:newInfo()},
+  {id:"c12",name:"디데이치과",      checks:{},info:newInfo()},
+  {id:"c13",name:"서울정석치과",    checks:{},info:newInfo()},
 ];
 let activeId="c1", currentTab="check", pwShow={}, isDirty=false;
 
 /* ─── 대시보드 데이터 ─── */
 let dashRows=[
-  Object.assign(newDashRow("녹색치과"),       {monthly:true,backlink:true,google_ai:true,web_post:true}),
-  Object.assign(newDashRow("범계유디치과"),   {hp_new:true,monthly:true,backlink:true,google_ai:true,web_post:true}),
-  Object.assign(newDashRow("엔와이치과"),     {hp_move:true,monthly:true,backlink:true,google_ai:true,web_post:true}),
-  Object.assign(newDashRow("베곤탑치과"),     {hp_move:true,monthly:true,backlink:true,google_ai:true,web_post:true}),
-  Object.assign(newDashRow("더에스플란트치과"),{hp_opt:true,monthly:true,backlink:true,google_ai:true,web_post:true}),
-  Object.assign(newDashRow("서울알프하임치과"),{monthly:true,backlink:true,google_ai:true,web_post:true}),
-  Object.assign(newDashRow("로덴성문치과"),   {}),
+  Object.assign(newDashRow("계양가온365치과"),  {hp_opt:true, monthly:true,backlink:true,google_ai:true,web_post:false,quote:true,contract_doc:true,deposit:false,google_review:true,qr_showcase:true,info_input:true}),
+  Object.assign(newDashRow("녹색치과"),         {hp_move:true,monthly:true,backlink:true,google_ai:true,web_post:false,quote:true,contract_doc:true,deposit:true, google_review:true,qr_showcase:true,info_input:true}),
+  Object.assign(newDashRow("범계유디치과"),     {hp_new:true, monthly:true,backlink:true,google_ai:true,web_post:false,quote:true,contract_doc:true,deposit:true, google_review:true,qr_showcase:true,info_input:false}),
+  Object.assign(newDashRow("엔와이치과"),       {hp_opt:true, monthly:true,backlink:true,google_ai:true,web_post:false,quote:true,contract_doc:true,deposit:true, google_review:true,qr_showcase:true,info_input:true}),
+  Object.assign(newDashRow("베곤탑치과"),       {hp_opt:true, monthly:true,backlink:true,google_ai:true,web_post:false,quote:true,contract_doc:true,deposit:true, google_review:true,qr_showcase:true,info_input:false}),
+  Object.assign(newDashRow("더에스플란트치과"), {hp_opt:true, monthly:true,backlink:true,google_ai:true,web_post:false,quote:true,contract_doc:true,deposit:true, google_review:true,qr_showcase:true,info_input:true}),
+  Object.assign(newDashRow("인천맥치과"),       {hp_new:true, monthly:true,backlink:true,google_ai:true,web_post:false,quote:true,contract_doc:true,deposit:true, google_review:true,qr_showcase:true,info_input:true}),
+  Object.assign(newDashRow("서울디테일치과"),   {hp_opt:true, monthly:true,backlink:true,google_ai:true,web_post:false,quote:true,contract_doc:true,deposit:true, google_review:true,qr_showcase:true,info_input:true}),
+  Object.assign(newDashRow("로덴성문치과"),     {hp_new:true, monthly:true,backlink:true,google_ai:true,web_post:false,quote:true,contract_doc:true,deposit:true, google_review:true,qr_showcase:false,info_input:false}),
+  Object.assign(newDashRow("화이트라인치과"),   {hp_opt:true, monthly:true,backlink:true,google_ai:true,web_post:false,quote:true,contract_doc:true,deposit:true, google_review:true,qr_showcase:true,info_input:true}),
+  Object.assign(newDashRow("아이엠치과병원"),   {hp_new:true, monthly:true,backlink:true,google_ai:true,web_post:false,quote:true,contract_doc:true,deposit:false,google_review:false,qr_showcase:false,info_input:false}),
+  Object.assign(newDashRow("디데이치과"),       {hp_opt:true, monthly:true,backlink:true,google_ai:true,web_post:true, quote:true,contract_doc:true,deposit:false,google_review:true,qr_showcase:true,info_input:true}),
+  Object.assign(newDashRow("서울정석치과"),     {hp_new:true, monthly:true,backlink:true,google_ai:true,web_post:false,quote:true,contract_doc:true,deposit:false,google_review:false,qr_showcase:false,info_input:false}),
 ];
 
 /* ─── 공통 helpers ─── */
@@ -750,9 +767,18 @@ function renderDashHeader(){
     <th style="text-align:left;padding-left:8px;width:${clinicColWidth}px;min-width:${clinicColWidth}px;position:sticky;left:32px;background:var(--surface2);z-index:3" data-key="__clinic__">
       <div class="th-wrap" style="position:relative">치과명<div class="col-resize" onmousedown="startResize(event,'__clinic__')" style="position:absolute;right:-3px;top:-9px;width:7px;height:200%;cursor:col-resize;z-index:20"></div></div>
     </th>`+
-    vc.map(col=>`<th style="width:${col.width}px;min-width:${col.width}px;${col.divider?"border-left:2px solid var(--border2)":""};position:relative" data-key="${col.key}">
-      <div class="th-wrap">${col.label.replace(/\n/g,"<br>")}</div>
-      <div class="col-resize" onmousedown="startResize(event,'${col.key}')"></div>
+    vc.map(col=>`<th style="width:${col.width}px;min-width:${col.width}px;${col.divider?"border-left:2px solid var(--border2)":""};position:relative;cursor:grab;user-select:none"
+      data-key="${col.key}"
+      draggable="true"
+      ondragstart="colHeaderDragStart(event,'${col.key}')"
+      ondragover="colHeaderDragOver(event,'${col.key}')"
+      ondrop="colHeaderDrop(event,'${col.key}')"
+      ondragleave="this.style.background=''"
+      title="드래그로 순서 변경 / 우클릭으로 삭제"
+      oncontextmenu="deleteColByKey('${col.key}',event)">
+      <div class="th-wrap">${col.label.replace(/\n/g,"<br>")}
+        <div class="col-resize" onmousedown="startResize(event,'${col.key}')" style="cursor:col-resize"></div>
+      </div>
     </th>`).join("")+
     `<th style="width:36px"></th>`;
 }
@@ -819,6 +845,56 @@ function initDragDrop(){
 }
 
 /* ─── 항목(컬럼) 관리 ─── */
+/* ─── 열 헤더 드래그로 순서 변경 ─── */
+let colHeaderDragKey=null;
+function colHeaderDragStart(e,key){
+  colHeaderDragKey=key;
+  e.dataTransfer.effectAllowed="move";
+  e.currentTarget.style.opacity="0.4";
+}
+function colHeaderDragOver(e,key){
+  e.preventDefault();
+  if(key!==colHeaderDragKey){
+    e.currentTarget.style.background="var(--accent-bg)";
+    e.currentTarget.style.outline="2px solid var(--accent)";
+  }
+}
+function colHeaderDrop(e,key){
+  e.preventDefault();
+  e.currentTarget.style.background="";
+  e.currentTarget.style.outline="";
+  if(!colHeaderDragKey||colHeaderDragKey===key)return;
+  const fromIdx=columns.findIndex(c=>c.key===colHeaderDragKey);
+  const toIdx=columns.findIndex(c=>c.key===key);
+  if(fromIdx===-1||toIdx===-1)return;
+  const [moved]=columns.splice(fromIdx,1);
+  columns.splice(toIdx,0,moved);
+  colHeaderDragKey=null;
+  renderDashboard();
+}
+
+/* ─── 인라인 열 추가 ─── */
+function addNewColInline(){
+  const label=prompt("새 항목 이름을 입력하세요\n(예: 유지보수, SEO, 블로그)");
+  if(!label||!label.trim())return;
+  const key="custom_"+Date.now();
+  columns.push({key,label:label.trim(),visible:true,width:65,group:"custom"});
+  dashRows.forEach(r=>{r[key]=false;});
+  renderDashboard();
+  autoSync();
+}
+
+/* ─── 우클릭으로 열 삭제 ─── */
+function deleteColByKey(key,e){
+  e.preventDefault();
+  const col=columns.find(c=>c.key===key);
+  if(!col)return;
+  if(!confirm(`"${col.label.replace(/\n/g," ")}" 항목을 삭제하시겠습니까?`))return;
+  columns=columns.filter(c=>c.key!==key);
+  renderDashboard();
+  autoSync();
+}
+
 function openColManager(){
   renderColList();
   document.getElementById("colModal").classList.add("open");
@@ -1003,7 +1079,11 @@ async function syncSave() {
   try {
     const { error } = await sb.from("app_data").upsert({
       id: "main",
-      clients,
+      clients: clients.map(c => ({
+        ...c,
+        checks: c.checks || {},
+        info:   c.info   || newInfo(),
+      })),
       dashboard: dashRows,
       tasks,
       updated_at: new Date().toISOString(),
@@ -1021,9 +1101,18 @@ async function syncLoad() {
   try {
     const { data, error } = await sb.from("app_data").select("*").eq("id", "main").single();
     if (error) throw error;
-    if (data.clients   && data.clients.length   > 0) clients  = data.clients;
+
+    if (data.clients && data.clients.length > 0) {
+      clients = data.clients.map(c => ({
+        ...c,
+        checks: typeof c.checks === "string" ? JSON.parse(c.checks || "{}") : (c.checks || {}),
+        info:   typeof c.info   === "string" ? JSON.parse(c.info   || "{}") : (c.info   || newInfo()),
+      }));
+      if (clients.length > 0) activeId = clients[0].id;
+    }
     if (data.dashboard && data.dashboard.length > 0) dashRows = data.dashboard.map(r => ({...newDashRow(""), ...r}));
     if (data.tasks     && data.tasks.length     > 0) tasks    = data.tasks;
+
     updateSyncStatus("ok", "불러오기 완료");
     renderSidebar();
     if (document.getElementById("dashView").style.display !== "none") renderDashboard();
