@@ -740,11 +740,16 @@ function applyFilter(){
   renderDashBody(rows);
 }
 
+let clinicColWidth = 130;
+
 function renderDashHeader(){
   const vc=visibleCols();
   const tr=document.getElementById("dashTheadRow");
   if(!tr)return;
-  tr.innerHTML=`<th style="width:32px"></th><th style="text-align:left;padding-left:8px;min-width:130px;position:sticky;left:32px;background:var(--surface2);z-index:3">치과명</th>`+
+  tr.innerHTML=`<th style="width:32px"></th>
+    <th style="text-align:left;padding-left:8px;width:${clinicColWidth}px;min-width:${clinicColWidth}px;position:sticky;left:32px;background:var(--surface2);z-index:3" data-key="__clinic__">
+      <div class="th-wrap" style="position:relative">치과명<div class="col-resize" onmousedown="startResize(event,'__clinic__')" style="position:absolute;right:-3px;top:-9px;width:7px;height:200%;cursor:col-resize;z-index:20"></div></div>
+    </th>`+
     vc.map(col=>`<th style="width:${col.width}px;min-width:${col.width}px;${col.divider?"border-left:2px solid var(--border2)":""};position:relative" data-key="${col.key}">
       <div class="th-wrap">${col.label.replace(/\n/g,"<br>")}</div>
       <div class="col-resize" onmousedown="startResize(event,'${col.key}')"></div>
@@ -757,7 +762,7 @@ function renderDashBody(rows){
   document.getElementById("dashBody").innerHTML=rows.map(row=>`
     <tr draggable="true" data-id="${row.id}">
       <td style="width:32px"><span class="drag-handle" title="드래그하여 순서 변경"><i class="fa-solid fa-grip-vertical"></i></span></td>
-      <td style="padding-left:8px;position:sticky;left:32px;background:var(--surface);z-index:1">
+      <td style="padding-left:8px;width:${clinicColWidth}px;min-width:${clinicColWidth}px;position:sticky;left:32px;background:var(--surface);z-index:1">
         <input class="name-input" value="${row.name.replace(/"/g,'&quot;')}" placeholder="병원명 입력"
           onchange="updateRow('${row.id}','name',this.value)"
           onfocus="this.style.background='var(--accent-bg)'" onblur="this.style.background='transparent'">
@@ -874,23 +879,28 @@ function startResize(e,key){
   e.preventDefault();
   resizeKey=key;
   resizeStartX=e.clientX;
-  const col=columns.find(c=>c.key===key);
-  resizeStartW=col?col.width:60;
+  if(key==="__clinic__"){
+    resizeStartW=clinicColWidth;
+  } else {
+    const col=columns.find(c=>c.key===key);
+    resizeStartW=col?col.width:60;
+  }
   document.addEventListener("mousemove",doResize);
   document.addEventListener("mouseup",endResize);
-  document.querySelector(`[data-key="${key}"] .col-resize`)?.classList.add("resizing");
 }
 function doResize(e){
   if(!resizeKey)return;
-  const col=columns.find(c=>c.key===resizeKey);
-  if(!col)return;
   const newW=Math.max(40,resizeStartW+(e.clientX-resizeStartX));
-  col.width=newW;
-  // 헤더 th와 tbody td 모두 즉시 업데이트
-  document.querySelectorAll(`th[data-key="${resizeKey}"]`).forEach(th=>{th.style.width=newW+"px";th.style.minWidth=newW+"px";});
-  document.querySelectorAll(`#dashBody td.svc-cell`).forEach((td,idx)=>{
-    // 해당 컬럼 인덱스 계산
-  });
+  if(resizeKey==="__clinic__"){
+    clinicColWidth=newW;
+    document.querySelectorAll(`th[data-key="__clinic__"]`).forEach(th=>{th.style.width=newW+"px";th.style.minWidth=newW+"px";});
+    document.querySelectorAll(`#dashBody td:nth-child(2)`).forEach(td=>{td.style.width=newW+"px";td.style.minWidth=newW+"px";});
+  } else {
+    const col=columns.find(c=>c.key===resizeKey);
+    if(!col)return;
+    col.width=newW;
+    document.querySelectorAll(`th[data-key="${resizeKey}"]`).forEach(th=>{th.style.width=newW+"px";th.style.minWidth=newW+"px";});
+  }
 }
 function endResize(){
   resizeKey=null;
